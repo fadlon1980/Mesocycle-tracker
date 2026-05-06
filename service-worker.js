@@ -1,4 +1,4 @@
-const CACHE_NAME = "mesocycle-tracker-v1";
+const CACHE_NAME = "mesocycle-tracker-v2-video-guides";
 const APP_SHELL = [
   "./",
   "./index.html",

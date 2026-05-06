@@ -35,3 +35,13 @@ Use one of these options:
 ## Data storage
 
 The tracker stores data in browser local storage on the device. Export JSON backups periodically from the Export / Import tab.
+
+
+## Video guide update
+
+This version adds:
+- A **Video Guides** tab with a button for every planned exercise.
+- A **Video** button in the workout logging table.
+- Video links open YouTube search results for short form-demo/tutorial videos. This is more durable than hard-coding individual videos that may be removed.
+
+After uploading this update to GitHub, open your GitHub Pages site on your Pixel 9 and refresh once. If the old version still appears, close/reopen the app or clear the site cache because PWAs can cache old files.

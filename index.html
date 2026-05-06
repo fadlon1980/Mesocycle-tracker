@@ -176,8 +176,36 @@
     .pwa-banner button { margin: 0; }
     .pwa-banner .install-hidden { display: none; }
 
+    .video-link {
+      display:inline-block;
+      margin-left:8px;
+      padding:4px 8px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      color:var(--accent);
+      text-decoration:none;
+      font-size:12px;
+      white-space:nowrap;
+      background:rgba(56,189,248,.08);
+    }
+    .video-link:hover { border-color:var(--accent); background:rgba(56,189,248,.14); }
+    .video-grid {
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap:10px;
+      margin-top:12px;
+    }
+    .video-card {
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      background:var(--card);
+    }
+    .video-card strong { display:block; margin-bottom:8px; }
+    .video-card a { margin-left:0; }
+
     @media (max-width: 860px) {
-      .grid.two, .grid.three { grid-template-columns: 1fr; }
+      .grid.two, .grid.three, .video-grid { grid-template-columns: 1fr; }
       .row { grid-template-columns: 1fr; }
       .col-2,.col-3,.col-4,.col-5,.col-6,.col-8,.col-12 { grid-column: span 1; }
       header { position: static; }
@@ -196,12 +224,13 @@
 <header>
   <div class="wrap">
     <h1>Hypertrophy Mesocycle Tracker</h1>
-    <p class="sub">Built for your May 6–June 14 muscle-gain block. Track workouts, sets, reps, RPE, bodyweight, recovery, nutrition, and export everything for review.</p>
+    <p class="sub">Built for your May 6–June 14 muscle-gain block. Track workouts, sets, reps, RPE, bodyweight, recovery, nutrition, exercise video guides, and export everything for review.</p>
     <nav>
       <button class="tab active" data-tab="dashboard">Dashboard</button>
       <button class="tab" data-tab="log">Log Workout</button>
       <button class="tab" data-tab="recovery">Recovery</button>
       <button class="tab" data-tab="plan">Plan</button>
+      <button class="tab" data-tab="videos">Video Guides</button>
       <button class="tab" data-tab="history">History</button>
       <button class="tab" data-tab="settings">Export / Import</button>
     </nav>
@@ -278,7 +307,7 @@
       </div>
 
       <h3>Exercises</h3>
-      <p class="small">Enter reps per set as comma-separated values, for example <span class="kbd">8,8,7,7</span>. Volume is estimated as load × total reps.</p>
+      <p class="small">Enter reps per set as comma-separated values, for example <span class="kbd">8,8,7,7</span>. Volume is estimated as load × total reps. Use the video button to open a short form-demo search for each exercise.</p>
       <div class="exercise-table-wrap">
         <table>
           <thead>
@@ -291,6 +320,7 @@
               <th>Actual reps</th>
               <th>Actual RPE</th>
               <th>Notes</th>
+              <th class="no-print">Video</th>
               <th class="no-print">Remove</th>
             </tr>
           </thead>
@@ -395,6 +425,15 @@
     </div>
   </section>
 
+
+  <section id="videos">
+    <div class="card">
+      <h2>Exercise Video Guides</h2>
+      <p class="small">These buttons open YouTube searches for short exercise demonstrations and form tutorials. Watch at least one clear demo before using an unfamiliar exercise, and choose pain-free variations when needed.</p>
+      <div id="videoGuideList" class="video-grid"></div>
+    </div>
+  </section>
+
   <section id="history">
     <div class="grid two">
       <div class="card">
@@ -464,6 +503,49 @@ const plan = {
   ]
 };
 
+const exerciseVideoQueries = {
+  "Back Squat or Leg Press": "back squat leg press proper form exercise tutorial short",
+  "Barbell Bench Press or Dumbbell Bench Press": "barbell bench press dumbbell bench press proper form tutorial short",
+  "Chest-Supported Row or Seated Cable Row": "chest supported row seated cable row proper form tutorial short",
+  "Romanian Deadlift": "romanian deadlift proper form tutorial short",
+  "Dumbbell Lateral Raise": "dumbbell lateral raise proper form tutorial short",
+  "Cable Triceps Pressdown": "cable triceps pressdown proper form tutorial short",
+  "Plank": "plank proper form tutorial short",
+  "Trap Bar Deadlift or Conventional Deadlift": "trap bar deadlift conventional deadlift proper form tutorial short",
+  "Pull-Up, Assisted Pull-Up, or Lat Pulldown": "pull up assisted pull up lat pulldown proper form tutorial short",
+  "Dumbbell Incline Press": "dumbbell incline press proper form tutorial short",
+  "Bulgarian Split Squat": "bulgarian split squat proper form tutorial short",
+  "Seated Dumbbell Shoulder Press": "seated dumbbell shoulder press proper form tutorial short",
+  "Dumbbell Curl or Cable Curl": "dumbbell curl cable curl proper form tutorial short",
+  "Pallof Press or Dead Bug": "pallof press dead bug proper form tutorial short",
+  "Hack Squat, Goblet Squat, or Front Squat": "hack squat goblet squat front squat proper form tutorial short",
+  "Machine Chest Press or Push-Up": "machine chest press push up proper form tutorial short",
+  "One-Arm Dumbbell Row or Cable Row": "one arm dumbbell row cable row proper form tutorial short",
+  "Hip Thrust or Glute Bridge": "hip thrust glute bridge proper form tutorial short",
+  "Leg Curl": "leg curl proper form tutorial short",
+  "Face Pull or Rear Delt Fly": "face pull rear delt fly proper form tutorial short",
+  "Standing Calf Raise": "standing calf raise proper form tutorial short",
+  "Farmer’s Carry": "farmer carry proper form tutorial short"
+};
+
+function videoSearchUrl(name) {
+  const query = exerciseVideoQueries[name] || `${name} proper form exercise tutorial short`;
+  return "https://www.youtube.com/results?search_query=" + encodeURIComponent(query);
+}
+function videoLinkHtml(name, label="Video") {
+  if (!name || !String(name).trim()) return "";
+  return `<a class="video-link no-print" href="${videoSearchUrl(name)}" target="_blank" rel="noopener noreferrer" title="Open exercise video search">${label}</a>`;
+}
+function uniquePlanExercises() {
+  const seen = new Set();
+  return Object.values(plan).flat().map(e => e[0]).filter(name => {
+    if (seen.has(name)) return false;
+    seen.add(name);
+    return true;
+  });
+}
+
+
 let data = loadData();
 
 function loadData() {
@@ -524,10 +606,19 @@ function addExerciseRow(name="", sets="", reps="", targetRpe="", load="", actual
     <td><input class="ex-actual-reps" placeholder="8,8,7" value="${escapeAttr(actualReps)}" /></td>
     <td><input class="ex-actual-rpe" type="number" min="1" max="10" step="0.5" value="${escapeAttr(actualRpe)}" /></td>
     <td><input class="ex-notes" value="${escapeAttr(notes)}" /></td>
+    <td class="no-print"><button class="btn video-row" type="button">Video</button></td>
     <td class="no-print"><button class="btn danger remove-row" type="button">×</button></td>
   `;
   tbody.appendChild(tr);
   tr.querySelector(".remove-row").addEventListener("click", () => tr.remove());
+  tr.querySelector(".video-row").addEventListener("click", () => {
+    const exerciseName = tr.querySelector(".ex-name").value.trim();
+    if (!exerciseName) {
+      alert("Add an exercise name first.");
+      return;
+    }
+    window.open(videoSearchUrl(exerciseName), "_blank", "noopener,noreferrer");
+  });
 }
 function escapeAttr(v) {
   return String(v ?? "").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;").replaceAll(">","&gt;");
@@ -596,8 +687,19 @@ document.getElementById("clearRecoveryForm").addEventListener("click", () => {
 function renderPlan() {
   ["Day 1","Day 2","Day 3"].forEach((day, idx) => {
     const ol = document.getElementById("planDay" + (idx+1));
-    ol.innerHTML = plan[day].map(e => `<li>${e[0]} – ${e[1]} sets | ${e[2]} | RPE ${e[3]}</li>`).join("");
+    ol.innerHTML = plan[day].map(e => `<li><strong>${e[0]}</strong> ${videoLinkHtml(e[0])}<br><span class="small">${e[1]} sets | ${e[2]} | RPE ${e[3]}</span></li>`).join("");
   });
+}
+
+function renderVideos() {
+  const container = document.getElementById("videoGuideList");
+  if (!container) return;
+  container.innerHTML = uniquePlanExercises().map(name => `
+    <div class="video-card">
+      <strong>${name}</strong>
+      ${videoLinkHtml(name, "Open video search")}
+    </div>
+  `).join("");
 }
 
 function renderDashboard() {
@@ -687,6 +789,7 @@ window.deleteRecovery = function(id) {
 
 function renderAll() {
   renderPlan();
+  renderVideos();
   renderDashboard();
   renderHistory();
 }
