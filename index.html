@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hypertrophy Mesocycle Tracker</title>
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="A private offline hypertrophy mesocycle tracker for workouts, RPE, recovery, nutrition, and exports." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Mesocycle Tracker" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <style>
+    :root {
+      --bg:#0f172a;
+      --panel:#111827;
+      --panel2:#1f2937;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --line:#334155;
+      --accent:#38bdf8;
+      --accent2:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --card:#0b1220;
+      --input:#020617;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #020617, var(--bg));
+      color: var(--text);
+      line-height:1.5;
+    }
+    header {
+      padding: 28px 18px 18px;
+      border-bottom:1px solid var(--line);
+      background: rgba(15,23,42,.88);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; }
+    h1 { margin:0 0 8px; font-size: clamp(1.5rem, 4vw, 2.4rem); letter-spacing:-.03em; }
+    h2 { margin: 0 0 14px; font-size:1.2rem; }
+    h3 { margin:18px 0 8px; font-size:1rem; }
+    p { color: var(--muted); margin: 6px 0; }
+    .sub { color: var(--muted); max-width: 850px; }
+    nav {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:16px;
+    }
+    nav button, .btn {
+      border:1px solid var(--line);
+      background: var(--panel2);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 9px 13px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    nav button.active, .btn.primary {
+      background: var(--accent);
+      color:#00111f;
+      border-color: var(--accent);
+    }
+    main { padding: 22px 18px 60px; }
+    section { display:none; }
+    section.active { display:block; }
+    .grid { display:grid; gap:14px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .card {
+      background: rgba(17,24,39,.88);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:16px;
+      box-shadow: 0 10px 35px rgba(0,0,0,.22);
+    }
+    .metric {
+      background: var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px;
+    }
+    .metric .num { font-size:1.7rem; font-weight:800; color: var(--accent); }
+    .metric .label { color:var(--muted); font-size:.9rem; }
+    label { display:block; color:var(--muted); font-size:.9rem; margin-bottom:6px; }
+    input, select, textarea {
+      width:100%;
+      background: var(--input);
+      border:1px solid var(--line);
+      color: var(--text);
+      border-radius:12px;
+      padding:10px 11px;
+      font: inherit;
+    }
+    textarea { min-height:80px; resize: vertical; }
+    .row { display:grid; grid-template-columns: repeat(12, 1fr); gap:10px; align-items:end; }
+    .col-2 { grid-column: span 2; }
+    .col-3 { grid-column: span 3; }
+    .col-4 { grid-column: span 4; }
+    .col-5 { grid-column: span 5; }
+    .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+    table { width:100%; border-collapse:collapse; font-size:.92rem; overflow:hidden; }
+    th, td { border-bottom:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-weight:700; background:#0b1220; }
+    td input, td select { padding:8px; border-radius:10px; min-width: 70px; }
+    .exercise-table-wrap { overflow:auto; border:1px solid var(--line); border-radius:14px; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+    .btn.danger { background:#3b1114; border-color:#7f1d1d; color:#fecaca; }
+    .btn.good { background:#072a18; border-color:#14532d; color:#bbf7d0; }
+    .btn.warn { background:#321f06; border-color:#92400e; color:#fde68a; }
+    .pill {
+      display:inline-block;
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:3px 9px;
+      color: var(--muted);
+      font-size:.82rem;
+      margin:2px;
+      background: #0b1220;
+    }
+    .week {
+      border-left:4px solid var(--accent);
+      padding-left:12px;
+      margin:12px 0;
+    }
+    .week.deload { border-left-color: var(--warn); }
+    .notice {
+      border:1px solid #164e63;
+      background:#062332;
+      color:#bae6fd;
+      border-radius:14px;
+      padding:12px;
+      margin: 10px 0 14px;
+    }
+    .warning {
+      border:1px solid #7f1d1d;
+      background:#2a1014;
+      color:#fecaca;
+      border-radius:14px;
+      padding:12px;
+      margin: 10px 0 14px;
+    }
+    .small { font-size:.84rem; color: var(--muted); }
+    .hidden { display:none !important; }
+    .right { text-align:right; }
+    .log-card { margin-bottom: 12px; }
+    .log-head { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background:#020617; border:1px solid var(--line); padding:1px 6px; border-radius:6px; }
+
+    .pwa-banner {
+      margin: 14px 0 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(2,6,23,.55);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pwa-banner strong { color: var(--text); }
+    .pwa-banner span { color: var(--muted); font-size: 13px; }
+    .pwa-banner button { margin: 0; }
+    .pwa-banner .install-hidden { display: none; }
+
+    @media (max-width: 860px) {
+      .grid.two, .grid.three { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+      .col-2,.col-3,.col-4,.col-5,.col-6,.col-8,.col-12 { grid-column: span 1; }
+      header { position: static; }
+      th, td { min-width: 120px; }
+    }
+    @media print {
+      body { background:white; color:#111; }
+      header, nav, .actions, .no-print { display:none !important; }
+      .card, .metric { border:1px solid #ccc; box-shadow:none; background:white; color:#111; }
+      p, label, .small, .label { color:#333 !important; }
+      section { display:block !important; page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Hypertrophy Mesocycle Tracker</h1>
+    <p class="sub">Built for your May 6–June 14 muscle-gain block. Track workouts, sets, reps, RPE, bodyweight, recovery, nutrition, and export everything for review.</p>
+    <nav>
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="log">Log Workout</button>
+      <button class="tab" data-tab="recovery">Recovery</button>
+      <button class="tab" data-tab="plan">Plan</button>
+      <button class="tab" data-tab="history">History</button>
+      <button class="tab" data-tab="settings">Export / Import</button>
+    </nav>
+
+    <div class="pwa-banner no-print" id="pwaBanner">
+      <div>
+        <strong>Phone-ready PWA</strong><br>
+        <span id="pwaStatus">Install from Chrome’s menu or use the Install button when it appears. Data stays on this device unless you export it.</span>
+      </div>
+      <button id="installPWA" class="install-hidden" type="button">Install app</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="dashboard" class="active">
+    <div class="notice">
+      <strong>How to use:</strong> log each session, record actual load/reps/RPE, and add recovery scores. Your data is stored locally in this browser using <span class="kbd">localStorage</span>.
+    </div>
+    <div class="grid three">
+      <div class="metric"><div class="num" id="dashWorkouts">0</div><div class="label">Workouts logged</div></div>
+      <div class="metric"><div class="num" id="dashVolume">0</div><div class="label">Estimated total volume</div></div>
+      <div class="metric"><div class="num" id="dashBodyweight">—</div><div class="label">Latest bodyweight</div></div>
+      <div class="metric"><div class="num" id="dashAvgRpe">—</div><div class="label">Average session RPE</div></div>
+      <div class="metric"><div class="num" id="dashProtein">—</div><div class="label">Latest protein logged</div></div>
+      <div class="metric"><div class="num" id="dashRecovery">—</div><div class="label">Latest recovery score</div></div>
+    </div>
+
+    <div class="grid two" style="margin-top:14px;">
+      <div class="card">
+        <h2>Today’s guidance</h2>
+        <div id="guidance"></div>
+      </div>
+      <div class="card">
+        <h2>Progression reminder</h2>
+        <p>When you reach the <strong>top of the rep range on all sets</strong> while staying at or below target RPE, increase load next time by the smallest practical jump.</p>
+        <p>Keep most work around <strong>RPE 7–8</strong>. Accessories can reach <strong>RPE 8–9</strong> late in the block, but avoid true failure.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="log">
+    <div class="card">
+      <h2>Log Workout</h2>
+      <div class="row">
+        <div class="col-3">
+          <label>Date</label>
+          <input type="date" id="workoutDate" />
+        </div>
+        <div class="col-3">
+          <label>Session</label>
+          <select id="sessionSelect">
+            <option value="Day 1">Day 1 - Full Body A</option>
+            <option value="Day 2">Day 2 - Full Body B</option>
+            <option value="Day 3">Day 3 - Full Body C</option>
+            <option value="Custom">Custom</option>
+          </select>
+        </div>
+        <div class="col-2">
+          <label>Duration min</label>
+          <input type="number" id="duration" min="0" max="240" placeholder="90" />
+        </div>
+        <div class="col-2">
+          <label>Session RPE</label>
+          <input type="number" id="sessionRpe" min="1" max="10" step="0.5" placeholder="7.5" />
+        </div>
+        <div class="col-2">
+          <label>Unit</label>
+          <select id="unit">
+            <option>kg</option>
+            <option>lb</option>
+          </select>
+        </div>
+      </div>
+
+      <h3>Exercises</h3>
+      <p class="small">Enter reps per set as comma-separated values, for example <span class="kbd">8,8,7,7</span>. Volume is estimated as load × total reps.</p>
+      <div class="exercise-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Exercise</th>
+              <th>Planned sets</th>
+              <th>Rep range</th>
+              <th>Target RPE</th>
+              <th>Load</th>
+              <th>Actual reps</th>
+              <th>Actual RPE</th>
+              <th>Notes</th>
+              <th class="no-print">Remove</th>
+            </tr>
+          </thead>
+          <tbody id="exerciseRows"></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button class="btn" id="addExercise">+ Add exercise</button>
+        <button class="btn primary" id="saveWorkout">Save workout</button>
+        <button class="btn warn" id="clearWorkoutForm">Clear form</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="recovery">
+    <div class="card">
+      <h2>Recovery, Bodyweight & Nutrition Check-In</h2>
+      <div class="row">
+        <div class="col-3">
+          <label>Date</label>
+          <input type="date" id="recoveryDate" />
+        </div>
+        <div class="col-3">
+          <label>Bodyweight</label>
+          <input type="number" id="bodyweight" step="0.01" placeholder="88.15" />
+        </div>
+        <div class="col-2">
+          <label>Weight unit</label>
+          <select id="weightUnit">
+            <option>kg</option>
+            <option>lb</option>
+          </select>
+        </div>
+        <div class="col-2">
+          <label>Protein g</label>
+          <input type="number" id="protein" min="0" placeholder="160" />
+        </div>
+        <div class="col-2">
+          <label>Sleep hours</label>
+          <input type="number" id="sleep" min="0" max="14" step="0.25" placeholder="7.5" />
+        </div>
+        <div class="col-2">
+          <label>General recovery 1–10</label>
+          <input type="number" id="generalRecovery" min="1" max="10" />
+        </div>
+        <div class="col-2">
+          <label>Muscle soreness 1–10</label>
+          <input type="number" id="soreness" min="1" max="10" />
+        </div>
+        <div class="col-2">
+          <label>Joint/tendon pain 1–10</label>
+          <input type="number" id="jointPain" min="1" max="10" />
+        </div>
+        <div class="col-2">
+          <label>Nutrition quality 1–10</label>
+          <input type="number" id="nutritionQuality" min="1" max="10" />
+        </div>
+        <div class="col-2">
+          <label>Energy/mood 1–10</label>
+          <input type="number" id="energyMood" min="1" max="10" />
+        </div>
+        <div class="col-2">
+          <label>Stress 1–10</label>
+          <input type="number" id="stress" min="1" max="10" />
+        </div>
+        <div class="col-12">
+          <label>Notes</label>
+          <textarea id="recoveryNotes" placeholder="Soreness by muscle group, sleep quality, appetite, unusual fatigue, etc."></textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="saveRecovery">Save check-in</button>
+        <button class="btn warn" id="clearRecoveryForm">Clear form</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="plan">
+    <div class="card">
+      <h2>Mesocycle Plan: May 6 – June 14</h2>
+      <div class="week"><strong>Week 1: May 6–10</strong><p>Baseline, technique, find working weights. RPE 6–7.</p></div>
+      <div class="week"><strong>Week 2: May 11–17</strong><p>Add reps or small load increases. RPE 7.</p></div>
+      <div class="week"><strong>Week 3: May 18–24</strong><p>Hypertrophy accumulation. Main lifts RPE 7–8, accessories RPE 8.</p></div>
+      <div class="week"><strong>Week 4: May 25–31</strong><p>Peak productive volume. Add one extra set to 2–3 priority exercises.</p></div>
+      <div class="week"><strong>Week 5: June 1–7</strong><p>Final overload week. Accessories may reach RPE 8–9; main lifts stay around RPE 8.</p></div>
+      <div class="week deload"><strong>Week 6: June 8–14</strong><p>Deload. Reduce total sets by 40–50%, use lighter loads, RPE 6–7.</p></div>
+    </div>
+
+    <div class="grid three" style="margin-top:14px;">
+      <div class="card">
+        <h2>Day 1 - Full Body A</h2>
+        <ol id="planDay1"></ol>
+      </div>
+      <div class="card">
+        <h2>Day 2 - Full Body B</h2>
+        <ol id="planDay2"></ol>
+      </div>
+      <div class="card">
+        <h2>Day 3 - Full Body C</h2>
+        <ol id="planDay3"></ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="history">
+    <div class="grid two">
+      <div class="card">
+        <h2>Workout History</h2>
+        <div id="workoutHistory"></div>
+      </div>
+      <div class="card">
+        <h2>Recovery History</h2>
+        <div id="recoveryHistory"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="settings">
+    <div class="card">
+      <h2>Export / Import</h2>
+      <p>Use exports before switching browsers or clearing browser data. CSV is useful for spreadsheets. JSON can restore the app exactly.</p>
+      <div class="actions">
+        <button class="btn good" id="exportCSV">Export CSV</button>
+        <button class="btn good" id="exportJSON">Export JSON backup</button>
+        <button class="btn" id="printPage">Print / Save PDF</button>
+      </div>
+      <h3>Import JSON backup</h3>
+      <input type="file" id="importFile" accept="application/json" />
+      <div class="actions">
+        <button class="btn" id="importJSON">Import selected JSON</button>
+      </div>
+      <div class="warning">
+        <strong>Danger zone:</strong> this only clears data in this browser for this app.
+        <div class="actions"><button class="btn danger" id="resetAll">Reset all data</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const STORAGE_KEY = "hypertrophy_mesocycle_tracker_v1";
+
+const plan = {
+  "Day 1": [
+    ["Back Squat or Leg Press",4,"6-8",7],
+    ["Barbell Bench Press or Dumbbell Bench Press",4,"6-8",7],
+    ["Chest-Supported Row or Seated Cable Row",4,"8-12","7-8"],
+    ["Romanian Deadlift",3,"8-10",7],
+    ["Dumbbell Lateral Raise",3,"12-20",8],
+    ["Cable Triceps Pressdown",3,"10-15",8],
+    ["Plank",3,"30-60 sec",7]
+  ],
+  "Day 2": [
+    ["Trap Bar Deadlift or Conventional Deadlift",3,"4-6",7],
+    ["Pull-Up, Assisted Pull-Up, or Lat Pulldown",4,"6-10","7-8"],
+    ["Dumbbell Incline Press",4,"8-10","7-8"],
+    ["Bulgarian Split Squat",3,"8-10/leg",7],
+    ["Seated Dumbbell Shoulder Press",3,"8-10",7],
+    ["Dumbbell Curl or Cable Curl",3,"10-15",8],
+    ["Pallof Press or Dead Bug",3,"10-12/side","6-7"]
+  ],
+  "Day 3": [
+    ["Hack Squat, Goblet Squat, or Front Squat",3,"8-12","7-8"],
+    ["Machine Chest Press or Push-Up",3,"8-12","7-8"],
+    ["One-Arm Dumbbell Row or Cable Row",3,"10-12/side","7-8"],
+    ["Hip Thrust or Glute Bridge",3,"8-12","7-8"],
+    ["Leg Curl",3,"10-15",8],
+    ["Face Pull or Rear Delt Fly",3,"12-20",8],
+    ["Standing Calf Raise",3,"10-15",8],
+    ["Farmer’s Carry",3,"30-60 sec",7]
+  ]
+};
+
+let data = loadData();
+
+function loadData() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { workouts: [], recovery: [] };
+  } catch {
+    return { workouts: [], recovery: [] };
+  }
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+function todayISO() {
+  return new Date().toISOString().slice(0,10);
+}
+function num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function parseReps(s) {
+  if (!s) return [];
+  return String(s).split(",").map(x => Number(x.trim())).filter(x => Number.isFinite(x));
+}
+function totalVolume(exercises) {
+  return exercises.reduce((sum,e) => {
+    const load = Number(e.load);
+    const reps = parseReps(e.actualReps).reduce((a,b)=>a+b,0);
+    if (!Number.isFinite(load)) return sum;
+    return sum + load * reps;
+  }, 0);
+}
+function setDefaultDates() {
+  document.getElementById("workoutDate").value = todayISO();
+  document.getElementById("recoveryDate").value = todayISO();
+}
+function switchTab(id) {
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === id));
+  document.querySelectorAll("main section").forEach(s => s.classList.toggle("active", s.id === id));
+  renderAll();
+}
+document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+function renderExerciseRows(session) {
+  const tbody = document.getElementById("exerciseRows");
+  tbody.innerHTML = "";
+  const rows = session === "Custom" ? [["", "", "", "", "", "", "", ""]] : plan[session].map(x => [...x, "", "", "", ""]);
+  rows.forEach(r => addExerciseRow(r[0], r[1], r[2], r[3], r[4]||"", r[5]||"", r[6]||"", r[7]||""));
+}
+function addExerciseRow(name="", sets="", reps="", targetRpe="", load="", actualReps="", actualRpe="", notes="") {
+  const tbody = document.getElementById("exerciseRows");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><input class="ex-name" value="${escapeAttr(name)}" /></td>
+    <td><input class="ex-sets" type="number" min="0" value="${escapeAttr(sets)}" /></td>
+    <td><input class="ex-reps" value="${escapeAttr(reps)}" /></td>
+    <td><input class="ex-target-rpe" value="${escapeAttr(targetRpe)}" /></td>
+    <td><input class="ex-load" type="number" step="0.01" value="${escapeAttr(load)}" /></td>
+    <td><input class="ex-actual-reps" placeholder="8,8,7" value="${escapeAttr(actualReps)}" /></td>
+    <td><input class="ex-actual-rpe" type="number" min="1" max="10" step="0.5" value="${escapeAttr(actualRpe)}" /></td>
+    <td><input class="ex-notes" value="${escapeAttr(notes)}" /></td>
+    <td class="no-print"><button class="btn danger remove-row" type="button">×</button></td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelector(".remove-row").addEventListener("click", () => tr.remove());
+}
+function escapeAttr(v) {
+  return String(v ?? "").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+document.getElementById("sessionSelect").addEventListener("change", e => renderExerciseRows(e.target.value));
+document.getElementById("addExercise").addEventListener("click", () => addExerciseRow());
+document.getElementById("clearWorkoutForm").addEventListener("click", () => {
+  document.getElementById("duration").value = "";
+  document.getElementById("sessionRpe").value = "";
+  renderExerciseRows(document.getElementById("sessionSelect").value);
+});
+document.getElementById("saveWorkout").addEventListener("click", () => {
+  const exercises = Array.from(document.querySelectorAll("#exerciseRows tr")).map(tr => ({
+    name: tr.querySelector(".ex-name").value.trim(),
+    plannedSets: tr.querySelector(".ex-sets").value,
+    repRange: tr.querySelector(".ex-reps").value.trim(),
+    targetRpe: tr.querySelector(".ex-target-rpe").value.trim(),
+    load: tr.querySelector(".ex-load").value,
+    actualReps: tr.querySelector(".ex-actual-reps").value.trim(),
+    actualRpe: tr.querySelector(".ex-actual-rpe").value,
+    notes: tr.querySelector(".ex-notes").value.trim()
+  })).filter(e => e.name || e.load || e.actualReps);
+  const workout = {
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    date: document.getElementById("workoutDate").value || todayISO(),
+    session: document.getElementById("sessionSelect").value,
+    duration: document.getElementById("duration").value,
+    sessionRpe: document.getElementById("sessionRpe").value,
+    unit: document.getElementById("unit").value,
+    exercises,
+    volume: totalVolume(exercises),
+    createdAt: new Date().toISOString()
+  };
+  data.workouts.push(workout);
+  saveData();
+  alert("Workout saved.");
+  renderAll();
+});
+
+document.getElementById("saveRecovery").addEventListener("click", () => {
+  const rec = {
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    date: document.getElementById("recoveryDate").value || todayISO(),
+    bodyweight: document.getElementById("bodyweight").value,
+    weightUnit: document.getElementById("weightUnit").value,
+    protein: document.getElementById("protein").value,
+    sleep: document.getElementById("sleep").value,
+    generalRecovery: document.getElementById("generalRecovery").value,
+    soreness: document.getElementById("soreness").value,
+    jointPain: document.getElementById("jointPain").value,
+    nutritionQuality: document.getElementById("nutritionQuality").value,
+    energyMood: document.getElementById("energyMood").value,
+    stress: document.getElementById("stress").value,
+    notes: document.getElementById("recoveryNotes").value.trim(),
+    createdAt: new Date().toISOString()
+  };
+  data.recovery.push(rec);
+  saveData();
+  alert("Recovery check-in saved.");
+  renderAll();
+});
+document.getElementById("clearRecoveryForm").addEventListener("click", () => {
+  ["bodyweight","protein","sleep","generalRecovery","soreness","jointPain","nutritionQuality","energyMood","stress","recoveryNotes"].forEach(id => document.getElementById(id).value = "");
+});
+
+function renderPlan() {
+  ["Day 1","Day 2","Day 3"].forEach((day, idx) => {
+    const ol = document.getElementById("planDay" + (idx+1));
+    ol.innerHTML = plan[day].map(e => `<li>${e[0]} – ${e[1]} sets | ${e[2]} | RPE ${e[3]}</li>`).join("");
+  });
+}
+
+function renderDashboard() {
+  const workouts = [...data.workouts].sort((a,b)=>a.date.localeCompare(b.date));
+  const recs = [...data.recovery].sort((a,b)=>a.date.localeCompare(b.date));
+  document.getElementById("dashWorkouts").textContent = workouts.length;
+  document.getElementById("dashVolume").textContent = Math.round(workouts.reduce((s,w)=>s+(w.volume||0),0)).toLocaleString();
+  const latestRec = recs.at(-1);
+  document.getElementById("dashBodyweight").textContent = latestRec && latestRec.bodyweight ? `${latestRec.bodyweight} ${latestRec.weightUnit}` : "—";
+  const avgRpe = workouts.map(w=>Number(w.sessionRpe)).filter(Number.isFinite);
+  document.getElementById("dashAvgRpe").textContent = avgRpe.length ? (avgRpe.reduce((a,b)=>a+b,0)/avgRpe.length).toFixed(1) : "—";
+  document.getElementById("dashProtein").textContent = latestRec && latestRec.protein ? `${latestRec.protein} g` : "—";
+  document.getElementById("dashRecovery").textContent = latestRec && latestRec.generalRecovery ? `${latestRec.generalRecovery}/10` : "—";
+
+  const guidance = document.getElementById("guidance");
+  if (!latestRec) {
+    guidance.innerHTML = `<p>Start by logging today’s recovery and your first workout. A useful first bodyweight target is slow gain: about <strong>0.2–0.4 kg/week</strong>.</p>`;
+    return;
+  }
+  const gr = Number(latestRec.generalRecovery);
+  const jp = Number(latestRec.jointPain);
+  const soreness = Number(latestRec.soreness);
+  const stress = Number(latestRec.stress);
+  let tips = [];
+  if (Number.isFinite(jp) && jp >= 6) tips.push("Joint/tendon pain is elevated. Keep today lighter, avoid painful ranges, and reduce lower-value volume.");
+  if (Number.isFinite(gr) && gr <= 4) tips.push("General recovery is low. Reduce today’s volume by about 20–30% or use a technique-focused session.");
+  if (Number.isFinite(soreness) && soreness >= 7) tips.push("Soreness is high. Avoid adding extra sets for sore muscle groups.");
+  if (Number.isFinite(stress) && stress >= 8) tips.push("Stress is high. Keep main lifts around RPE 6–7 today.");
+  if (!tips.length) tips.push("Recovery looks acceptable. Follow the planned session and progress only if technique and RPE are under control.");
+  guidance.innerHTML = tips.map(t=>`<p>• ${t}</p>`).join("");
+}
+
+function renderHistory() {
+  const wh = document.getElementById("workoutHistory");
+  const rh = document.getElementById("recoveryHistory");
+  const workouts = [...data.workouts].sort((a,b)=>b.date.localeCompare(a.date));
+  const recs = [...data.recovery].sort((a,b)=>b.date.localeCompare(a.date));
+
+  wh.innerHTML = workouts.length ? workouts.map(w => `
+    <div class="card log-card">
+      <div class="log-head">
+        <strong>${w.date} · ${w.session}</strong>
+        <span class="pill">${w.duration || "—"} min</span><span class="pill">Session RPE ${w.sessionRpe || "—"}</span><span class="pill">Volume ${Math.round(w.volume||0).toLocaleString()} ${w.unit || ""}</span>
+      </div>
+      <table style="margin-top:10px;">
+        <thead><tr><th>Exercise</th><th>Plan</th><th>Load</th><th>Actual reps</th><th>RPE</th><th>Notes</th></tr></thead>
+        <tbody>
+          ${w.exercises.map(e => `<tr><td>${esc(e.name)}</td><td>${esc(e.plannedSets)} × ${esc(e.repRange)} @ ${esc(e.targetRpe)}</td><td>${esc(e.load)} ${esc(w.unit)}</td><td>${esc(e.actualReps)}</td><td>${esc(e.actualRpe)}</td><td>${esc(e.notes)}</td></tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="actions no-print"><button class="btn danger" onclick="deleteWorkout('${w.id}')">Delete</button></div>
+    </div>
+  `).join("") : `<p>No workouts yet.</p>`;
+
+  rh.innerHTML = recs.length ? recs.map(r => `
+    <div class="card log-card">
+      <strong>${r.date}</strong>
+      <p>
+        <span class="pill">BW ${r.bodyweight || "—"} ${r.weightUnit || ""}</span>
+        <span class="pill">Protein ${r.protein || "—"} g</span>
+        <span class="pill">Sleep ${r.sleep || "—"} h</span>
+        <span class="pill">Recovery ${r.generalRecovery || "—"}/10</span>
+        <span class="pill">Soreness ${r.soreness || "—"}/10</span>
+        <span class="pill">Joint pain ${r.jointPain || "—"}/10</span>
+        <span class="pill">Nutrition ${r.nutritionQuality || "—"}/10</span>
+        <span class="pill">Energy ${r.energyMood || "—"}/10</span>
+        <span class="pill">Stress ${r.stress || "—"}/10</span>
+      </p>
+      <p>${esc(r.notes || "")}</p>
+      <div class="actions no-print"><button class="btn danger" onclick="deleteRecovery('${r.id}')">Delete</button></div>
+    </div>
+  `).join("") : `<p>No recovery check-ins yet.</p>`;
+}
+function esc(v) {
+  return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+window.deleteWorkout = function(id) {
+  if (!confirm("Delete this workout?")) return;
+  data.workouts = data.workouts.filter(w => w.id !== id);
+  saveData(); renderAll();
+}
+window.deleteRecovery = function(id) {
+  if (!confirm("Delete this recovery check-in?")) return;
+  data.recovery = data.recovery.filter(r => r.id !== id);
+  saveData(); renderAll();
+}
+
+function renderAll() {
+  renderPlan();
+  renderDashboard();
+  renderHistory();
+}
+
+function download(filename, text, type="text/plain") {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function csvEscape(v) {
+  const s = String(v ?? "");
+  return /[",\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
+}
+document.getElementById("exportCSV").addEventListener("click", () => {
+  const workoutRows = [["type","date","session","duration","sessionRpe","unit","exercise","plannedSets","repRange","targetRpe","load","actualReps","actualRpe","notes","volume"]];
+  data.workouts.forEach(w => {
+    w.exercises.forEach(e => workoutRows.push(["workout",w.date,w.session,w.duration,w.sessionRpe,w.unit,e.name,e.plannedSets,e.repRange,e.targetRpe,e.load,e.actualReps,e.actualRpe,e.notes,w.volume]));
+  });
+  const recoveryRows = [["type","date","bodyweight","weightUnit","protein","sleep","generalRecovery","soreness","jointPain","nutritionQuality","energyMood","stress","notes"]];
+  data.recovery.forEach(r => recoveryRows.push(["recovery",r.date,r.bodyweight,r.weightUnit,r.protein,r.sleep,r.generalRecovery,r.soreness,r.jointPain,r.nutritionQuality,r.energyMood,r.stress,r.notes]));
+  const csv = workoutRows.map(r=>r.map(csvEscape).join(",")).join("\n") + "\n\n" + recoveryRows.map(r=>r.map(csvEscape).join(",")).join("\n");
+  download("hypertrophy_mesocycle_export.csv", csv, "text/csv");
+});
+document.getElementById("exportJSON").addEventListener("click", () => {
+  download("hypertrophy_mesocycle_backup.json", JSON.stringify(data, null, 2), "application/json");
+});
+document.getElementById("importJSON").addEventListener("click", () => {
+  const file = document.getElementById("importFile").files[0];
+  if (!file) return alert("Select a JSON backup first.");
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      if (!imported.workouts || !imported.recovery) throw new Error("Invalid format");
+      data = imported;
+      saveData();
+      renderAll();
+      alert("Import complete.");
+    } catch(e) {
+      alert("Import failed: invalid JSON backup.");
+    }
+  };
+  reader.readAsText(file);
+});
+document.getElementById("resetAll").addEventListener("click", () => {
+  if (!confirm("Reset all saved tracker data?")) return;
+  data = { workouts: [], recovery: [] };
+  saveData();
+  renderAll();
+});
+document.getElementById("printPage").addEventListener("click", () => window.print());
+
+
+// PWA install + offline support
+let deferredInstallPrompt = null;
+const installButton = document.getElementById("installPWA");
+const pwaStatus = document.getElementById("pwaStatus");
+
+function isStandalonePWA() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("./service-worker.js");
+      if (pwaStatus && !isStandalonePWA()) {
+        pwaStatus.textContent = "Offline support is active. On Android Chrome, tap Install app when available, or Menu → Add to Home screen.";
+      }
+      registration.addEventListener("updatefound", () => {
+        const newWorker = registration.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller && pwaStatus) {
+            pwaStatus.textContent = "A new version is ready. Close and reopen the app to update.";
+          }
+        });
+      });
+    } catch (err) {
+      if (pwaStatus) pwaStatus.textContent = "Offline setup could not start. The tracker still works, but installability may be limited.";
+    }
+  });
+} else if (pwaStatus && location.protocol === "file:") {
+  pwaStatus.textContent = "You opened this as a file. For install/offline mode, serve it over HTTPS or localhost, then open it in Chrome.";
+}
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  if (installButton) installButton.classList.remove("install-hidden");
+  if (pwaStatus) pwaStatus.textContent = "This tracker can be installed on your phone. Tap Install app.";
+});
+
+if (installButton) {
+  installButton.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installButton.classList.add("install-hidden");
+  });
+}
+
+window.addEventListener("appinstalled", () => {
+  if (pwaStatus) pwaStatus.textContent = "Installed. Open it from your home screen for the app-like experience.";
+  if (installButton) installButton.classList.add("install-hidden");
+});
+
+if (isStandalonePWA() && pwaStatus) {
+  pwaStatus.textContent = "Installed mode is active. Keep exporting JSON backups periodically.";
+}
+
+setDefaultDates();
+renderExerciseRows("Day 1");
+renderAll();
+</script>
+</body>
+</html>
